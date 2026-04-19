@@ -1,0 +1,3 @@
+-- Placeholder for backend workflow seeding
+-- Data will be handled in subsequent scripts when users table linkages are configured
+-- DO NOT seed auth.users in standard migrations as it requires complex RPCs for password encryption.
