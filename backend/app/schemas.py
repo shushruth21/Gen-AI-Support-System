@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import List, Optional, Literal, Dict, Any
+from pydantic import BaseModel
+from typing import List, Optional, Literal
 
 class User(BaseModel):
     id: str
@@ -10,9 +10,17 @@ class User(BaseModel):
 class AITriageMetadata(BaseModel):
     suggestedPriority: Optional[str] = None
     suggestedSeverity: Optional[str] = None
+    suggestedCategory: Optional[str] = None
     summary: Optional[str] = None
     sentiment: Optional[str] = None
+    keywords: Optional[List[str]] = None
     confidenceScore: Optional[float] = None
+    probableRootCause: Optional[str] = None
+    impactedComponent: Optional[str] = None
+    suggestedNextAction: Optional[str] = None
+    duplicateOf: Optional[str] = None
+    agentAssistSuggestion: Optional[str] = None
+    knowledgeArticleIds: Optional[List[str]] = None
 
 class WorkItem(BaseModel):
     id: str
@@ -22,6 +30,10 @@ class WorkItem(BaseModel):
     status: Literal['open', 'in_progress', 'pending_approval', 'resolved', 'closed']
     priority: Literal['low', 'medium', 'high', 'urgent']
     severity: Optional[str] = None
+    category: Optional[str] = None
+    slaRisk: Optional[str] = None
+    resolutionHours: Optional[float] = None
+    escalated: Optional[bool] = None
     assigneeId: Optional[str] = None
     teamId: Optional[str] = None
     reporterId: str
@@ -36,6 +48,7 @@ class Approval(BaseModel):
     approverId: str
     status: Literal['pending', 'approved', 'rejected']
     requestedAt: str
+    respondedAt: Optional[str] = None
     notes: Optional[str] = None
 
 class KnowledgeArticle(BaseModel):

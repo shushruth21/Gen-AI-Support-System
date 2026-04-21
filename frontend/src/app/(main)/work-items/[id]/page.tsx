@@ -1,12 +1,16 @@
-import { getWorkItemById } from "@/lib/mock-data";
+import { getWorkItemById } from "@/lib/api";
 import { notFound } from "next/navigation";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PriorityBadge } from "@/components/ui/PriorityBadge";
 import { Clock, User as UserIcon, Bot } from "lucide-react";
 
 export default async function WorkItemDetailPage({ params }: { params: { id: string } }) {
-  // Simulate Service fetch
-  const item = await getWorkItemById(params.id);
+  let item;
+  try {
+    item = await getWorkItemById(params.id);
+  } catch {
+    notFound();
+  }
 
   if (!item) {
     notFound(); // Triggers the default Next.js 404 behavior safely

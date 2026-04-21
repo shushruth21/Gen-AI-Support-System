@@ -1,7 +1,6 @@
 import { WorkItem } from "@/types";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PriorityBadge } from "@/components/ui/PriorityBadge";
-import { formatDistanceToNow } from "next/dist/compiled/date-fns"; // fallback hack if date-fns not installed, wait standard UI can just do basic date wrapper
 
 export function WorkItemTable({ items }: { items: WorkItem[] }) {
   if (items.length === 0) {

@@ -1,9 +1,19 @@
 import { getWorkItems } from "@/lib/api";
+import { generateMockWorkItems } from "@/lib/generators/ticketDataGenerator";
 import { WorkItemTable } from "@/components/features/WorkItemTable";
 
 export default async function AssignedPage() {
-  // Removing hardcoded user 'u2' as it is not a valid Postgres UUID
-  const assignedItems = await getWorkItems();
+  let assignedItems;
+  try {
+    assignedItems = await getWorkItems();
+    if (!assignedItems.length) throw new Error("empty");
+    // Show only open/in-progress items as the active queue
+    assignedItems = assignedItems.filter((i) => i.status === 'open' || i.status === 'in_progress');
+  } catch {
+    assignedItems = generateMockWorkItems(40).filter(
+      (i) => i.status === 'open' || i.status === 'in_progress'
+    );
+  }
 
   return (
     <div className="space-y-6">

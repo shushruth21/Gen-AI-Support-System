@@ -1,9 +1,21 @@
-// Shared Types & Literals (Used over Enums for better frontend/backend serialization compatibility)
+// Shared Types & Literals
 export type WorkItemType = 'ticket' | 'issue';
 export type WorkItemStatus = 'open' | 'in_progress' | 'pending_approval' | 'resolved' | 'closed';
 export type Priority = 'low' | 'medium' | 'high' | 'urgent';
-export type Severity = 'sev4' | 'sev3' | 'sev2' | 'sev1'; // Typically reserved for Issues
+export type Severity = 'sev4' | 'sev3' | 'sev2' | 'sev1';
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+export type TicketCategory =
+  | 'authentication'
+  | 'performance'
+  | 'billing'
+  | 'data-export'
+  | 'integrations'
+  | 'ui-bug'
+  | 'mobile'
+  | 'notifications'
+  | 'security'
+  | 'other';
+export type SLARisk = 'low' | 'medium' | 'high' | 'breached';
 
 // User & Team Management
 export interface User {
@@ -20,17 +32,21 @@ export interface Team {
   description?: string;
 }
 
-// AI Integration Metadata (For later use, keeping the structure ready)
+// AI Integration Metadata
 export interface AITriageMetadata {
   suggestedPriority?: Priority;
   suggestedSeverity?: Severity;
+  suggestedCategory?: TicketCategory;
   summary?: string;
   sentiment?: 'positive' | 'neutral' | 'negative';
   keywords?: string[];
   confidenceScore?: number;
+  duplicateOf?: string;
+  agentAssistSuggestion?: string;
+  knowledgeArticleIds?: string[];
 }
 
-// Core Work Item (Shared base for Tickets & Issues)
+// Core Work Item
 export interface WorkItem {
   id: string;
   type: WorkItemType;
@@ -38,16 +54,18 @@ export interface WorkItem {
   description: string;
   status: WorkItemStatus;
   priority: Priority;
-  severity?: Severity; 
+  severity?: Severity;
+  category?: TicketCategory;
+  slaRisk?: SLARisk;
+  resolutionHours?: number;
+  escalated?: boolean;
   reporterId: string;
-  assigneeId?: string; // Supports "Assigned" View
+  assigneeId?: string;
   teamId?: string;
-  createdAt: string; // ISO string for easy JSON transit
+  createdAt: string;
   updatedAt: string;
   resolvedAt?: string;
-  
-  // AI metadata isolated so it can be added incrementally later
-  aiMetadata?: AITriageMetadata; 
+  aiMetadata?: AITriageMetadata;
 }
 
 // Child Elements of Work Items
@@ -56,7 +74,7 @@ export interface Comment {
   workItemId: string;
   authorId: string;
   content: string;
-  isInternal: boolean; // True if it's a private note for staff
+  isInternal: boolean;
   createdAt: string;
 }
 
@@ -75,7 +93,7 @@ export interface ActivityLog {
   workItemId: string;
   actorId: string;
   action: string;
-  details?: Record<string, any>; // JSON payload for what changed
+  details?: Record<string, unknown>;
   createdAt: string;
 }
 
@@ -89,4 +107,16 @@ export interface KnowledgeArticle {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+// Dashboard Analytics
+export interface DashboardKPI {
+  totalTickets: number;
+  totalTicketsDelta: number;
+  avgResolutionHours: number;
+  avgResolutionHoursDelta: number;
+  aiTriageCoverage: number;
+  aiTriageCoverageDelta: number;
+  slaBreachRisk: number;
+  slaBreachRiskDelta: number;
 }

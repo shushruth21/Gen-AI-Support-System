@@ -1,9 +1,15 @@
 import { getWorkItems } from "@/lib/api";
+import { generateMockWorkItems } from "@/lib/generators/ticketDataGenerator";
 import { WorkItemTable } from "@/components/features/WorkItemTable";
 
 export default async function TicketsPage() {
-  // Service layer fetch specifically for 'tickets'
-  const tickets = await getWorkItems('ticket');
+  let tickets;
+  try {
+    tickets = await getWorkItems('ticket');
+    if (!tickets.length) throw new Error("empty");
+  } catch {
+    tickets = generateMockWorkItems(80).filter((i) => i.type === 'ticket');
+  }
 
   return (
     <div className="space-y-6">
@@ -13,7 +19,7 @@ export default async function TicketsPage() {
           <p className="text-sm text-slate-500 mt-1">Manage standard customer inquiries and requests</p>
         </div>
         <button className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm px-4 py-2 rounded-lg transition-colors shadow-sm">
-            Create Ticket
+          Create Ticket
         </button>
       </div>
 

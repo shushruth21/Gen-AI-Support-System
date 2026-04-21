@@ -1,8 +1,6 @@
 import { WorkItem, Approval, KnowledgeArticle } from "@/types";
 
-// In Phase 1, we still fall back to mock data if the API base URL is not provided.
-// In Phase 3, we force resolution to the FastAPI backend.
-import { getWorkItems as getMockWorkItems, getWorkItemById as getMockWorkItemById, getDashboardStats as getMockDashboardStats, mockApprovals, mockKnowledge } from "../mock-data";
+// In Phase 3, we force resolution to the FastAPI backend and throw an error if missing.
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -13,7 +11,7 @@ class ApiError extends Error {
 }
 
 export async function getDashboardStats() {
-    if (!API_BASE_URL) return getMockDashboardStats();
+    if (!API_BASE_URL) throw new Error("NEXT_PUBLIC_API_BASE_URL is not set");
 
     const res = await fetch(`${API_BASE_URL}/api/v1/dashboard`, { cache: 'no-store' });
     if (!res.ok) throw new ApiError(res.status, 'Failed to fetch dashboard stats');
@@ -21,7 +19,7 @@ export async function getDashboardStats() {
 }
 
 export async function getWorkItems(type?: 'ticket' | 'issue', assigneeId?: string): Promise<WorkItem[]> {
-    if (!API_BASE_URL) return getMockWorkItems(type, assigneeId);
+    if (!API_BASE_URL) throw new Error("NEXT_PUBLIC_API_BASE_URL is not set");
 
     const params = new URLSearchParams();
     if (type) params.append('type', type);
@@ -33,7 +31,7 @@ export async function getWorkItems(type?: 'ticket' | 'issue', assigneeId?: strin
 }
 
 export async function getWorkItemById(id: string): Promise<WorkItem | null> {
-    if (!API_BASE_URL) return getMockWorkItemById(id);
+    if (!API_BASE_URL) throw new Error("NEXT_PUBLIC_API_BASE_URL is not set");
 
     const res = await fetch(`${API_BASE_URL}/api/v1/work-items/${id}`, { cache: 'no-store' });
     if (res.status === 404) return null;
@@ -42,7 +40,7 @@ export async function getWorkItemById(id: string): Promise<WorkItem | null> {
 }
 
 export async function getApprovals(): Promise<Approval[]> {
-    if (!API_BASE_URL) return mockApprovals;
+    if (!API_BASE_URL) throw new Error("NEXT_PUBLIC_API_BASE_URL is not set");
 
     const res = await fetch(`${API_BASE_URL}/api/v1/approvals`, { cache: 'no-store' });
     if (!res.ok) throw new ApiError(res.status, 'Failed to fetch approvals');
@@ -50,7 +48,7 @@ export async function getApprovals(): Promise<Approval[]> {
 }
 
 export async function getKnowledge(): Promise<KnowledgeArticle[]> {
-    if (!API_BASE_URL) return mockKnowledge;
+    if (!API_BASE_URL) throw new Error("NEXT_PUBLIC_API_BASE_URL is not set");
 
     const res = await fetch(`${API_BASE_URL}/api/v1/knowledge`, { cache: 'no-store' });
     if (!res.ok) throw new ApiError(res.status, 'Failed to fetch knowledge base');

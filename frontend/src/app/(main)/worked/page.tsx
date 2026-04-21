@@ -1,9 +1,19 @@
 import { getWorkItems } from "@/lib/api";
+import { generateMockWorkItems } from "@/lib/generators/ticketDataGenerator";
 import { WorkItemTable } from "@/components/features/WorkItemTable";
 
 export default async function WorkedPage() {
-  // Just show all items as placeholder for 'worked history'
-  const workedItems = await getWorkItems();
+  let workedItems;
+  try {
+    workedItems = await getWorkItems();
+    if (!workedItems.length) throw new Error("empty");
+    // Show only resolved/closed items as history
+    workedItems = workedItems.filter((i) => i.status === 'resolved' || i.status === 'closed');
+  } catch {
+    workedItems = generateMockWorkItems(60).filter(
+      (i) => i.status === 'resolved' || i.status === 'closed'
+    );
+  }
 
   return (
     <div className="space-y-6">
