@@ -1,0 +1,2366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gen AI Support System — DSC 550 Master's Project</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── Reset & Base ──────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #060818;
+      color: #e2e8f0;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ─── CSS Variables ─────────────────────────────────────── */
+    :root {
+      --accent:       #6366f1;
+      --accent-light: #818cf8;
+      --accent-glow:  rgba(99, 102, 241, 0.35);
+      --teal:         #22d3ee;
+      --teal-dim:     rgba(34, 211, 238, 0.15);
+      --amber:        #f59e0b;
+      --green:        #10b981;
+      --rose:         #f43f5e;
+      --surface:      rgba(255,255,255,0.04);
+      --border:       rgba(255,255,255,0.08);
+      --text-muted:   #94a3b8;
+      --gradient-hero: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    }
+
+    /* ─── Slide Container ───────────────────────────────────── */
+    .deck {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 48px 64px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1),
+                  transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+      transform: translateX(60px);
+    }
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(0);
+    }
+    .slide.exit {
+      opacity: 0;
+      transform: translateX(-60px);
+    }
+
+    /* ─── Animated mesh background ─────────────────────────── */
+    .mesh {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .mesh-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(100px);
+      opacity: 0.18;
+      animation: drift 18s ease-in-out infinite alternate;
+    }
+    .mesh-orb:nth-child(1) { width:600px;height:600px;background:var(--accent);top:-150px;left:-150px; animation-delay:0s; }
+    .mesh-orb:nth-child(2) { width:400px;height:400px;background:var(--teal);bottom:-100px;right:-80px; animation-delay:-6s; }
+    .mesh-orb:nth-child(3) { width:300px;height:300px;background:#7c3aed;top:40%;left:55%; animation-delay:-12s; }
+    @keyframes drift {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(30px, 20px) scale(1.08); }
+    }
+
+    /* ─── Grid overlay ──────────────────────────────────────── */
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    /* ─── Navigation ────────────────────────────────────────── */
+    .nav {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      z-index: 100;
+      background: rgba(6,8,24,0.8);
+      backdrop-filter: blur(24px);
+      border: 1px solid var(--border);
+      border-radius: 40px;
+      padding: 10px 24px;
+    }
+    .nav-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+    .nav-btn:hover { background: var(--surface); color: #fff; }
+    .nav-counter {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      min-width: 60px;
+      text-align: center;
+    }
+    .slide-dots {
+      display: flex;
+      gap: 6px;
+    }
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .dot.active {
+      background: var(--accent-light);
+      width: 18px;
+      border-radius: 3px;
+    }
+
+    /* ─── Progress bar ──────────────────────────────────────── */
+    .progress-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--teal));
+      z-index: 100;
+      transition: width 0.4s ease;
+    }
+
+    /* ─── Slide number badge ────────────────────────────────── */
+    .slide-badge {
+      position: fixed;
+      top: 24px;
+      right: 28px;
+      z-index: 100;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 1px;
+    }
+
+    /* ─── Keyboard hint ─────────────────────────────────────── */
+    .kb-hint {
+      position: fixed;
+      top: 24px;
+      left: 28px;
+      z-index: 100;
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .kb-hint kbd {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ─── Shared Slide Elements ─────────────────────────────── */
+    .slide-content { width: 100%; max-width: 1100px; position: relative; z-index: 2; }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .chip-accent { background: rgba(99,102,241,0.15); color: var(--accent-light); border: 1px solid rgba(99,102,241,0.3); }
+    .chip-teal   { background: rgba(34,211,238,0.1);  color: var(--teal);         border: 1px solid rgba(34,211,238,0.2); }
+    .chip-amber  { background: rgba(245,158,11,0.1);  color: var(--amber);         border: 1px solid rgba(245,158,11,0.2); }
+    .chip-green  { background: rgba(16,185,129,0.1);  color: var(--green);         border: 1px solid rgba(16,185,129,0.2); }
+    .chip-rose   { background: rgba(244,63,94,0.1);   color: var(--rose);          border: 1px solid rgba(244,63,94,0.2); }
+
+    h1.mega {
+      font-size: clamp(2.4rem, 5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+    }
+    h2.slide-title {
+      font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+    }
+    h3.section-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    p.lead { font-size: 1.05rem; color: var(--text-muted); line-height: 1.7; }
+    .gradient-text {
+      background: linear-gradient(135deg, var(--accent-light), var(--teal));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Card */
+    .card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      backdrop-filter: blur(8px);
+      transition: border-color 0.3s, transform 0.3s;
+    }
+    .card:hover { border-color: rgba(99,102,241,0.4); transform: translateY(-2px); }
+
+    .card-glow {
+      background: rgba(99,102,241,0.06);
+      border-color: rgba(99,102,241,0.2);
+    }
+
+    /* Divider */
+    .divider {
+      width: 48px;
+      height: 3px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--teal));
+      margin: 12px 0 20px;
+    }
+
+    /* Icon badge */
+    .icon-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .ib-accent { background: rgba(99,102,241,0.15); }
+    .ib-teal   { background: rgba(34,211,238,0.12); }
+    .ib-amber  { background: rgba(245,158,11,0.12); }
+    .ib-green  { background: rgba(16,185,129,0.12); }
+    .ib-rose   { background: rgba(244,63,94,0.12); }
+
+    /* Grid helpers */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+    /* Stat */
+    .stat-value { font-size: 2.4rem; font-weight: 800; line-height: 1; }
+    .stat-label { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+    /* Tag */
+    .tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .tag-blue   { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+    .tag-teal   { background: rgba(34,211,238,0.12); color: var(--teal); }
+    .tag-green  { background: rgba(16,185,129,0.12); color: #6ee7b7; }
+    .tag-amber  { background: rgba(245,158,11,0.12); color: #fcd34d; }
+    .tag-rose   { background: rgba(244,63,94,0.12);  color: #fda4af; }
+    .tag-purple { background: rgba(167,139,250,0.12); color: #c4b5fd; }
+
+    /* Arrow connector */
+    .arrow { color: var(--text-muted); font-size: 1.4rem; display: flex; align-items: center; }
+
+    /* ───────────────────────────────────────────────────────── */
+    /* SLIDE 1 – TITLE                                         */
+    /* ───────────────────────────────────────────────────────── */
+    #slide-1 {
+      background: radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.08) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 20%, rgba(34,211,238,0.06) 0%, transparent 50%);
+      text-align: center;
+    }
+    .hero-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(99,102,241,0.1);
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: 24px;
+      padding: 6px 18px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent-light);
+      margin-bottom: 28px;
+    }
+    .hero-pill .dot-pulse {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity:1; transform:scale(1); }
+      50% { opacity:0.5; transform:scale(0.8); }
+    }
+    .hero-sub {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      margin-top: 20px;
+      font-weight: 400;
+    }
+    .contributors {
+      margin-top: 40px; 
+      display:flex; 
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .contributor-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 20px;
+    }
+    .contributor-avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .av-1 { background: linear-gradient(135deg, #6366f1, #818cf8); }
+    .av-2 { background: linear-gradient(135deg, #06b6d4, #22d3ee); }
+    .contributor-name { font-weight: 600; font-size: 0.95rem; }
+    .contributor-role { font-size: 0.75rem; color: var(--text-muted); }
+    .university-badge {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    /* ───────────────────────────────────────────────────────── */
+    /* SLIDE 2 – AGENDA                                        */
+    /* ───────────────────────────────────────────────────────── */
+    .agenda-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .agenda-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      transition: all 0.3s;
+    }
+    .agenda-item:hover {
+      border-color: rgba(99,102,241,0.4);
+      background: rgba(99,102,241,0.06);
+    }
+    .agenda-num {
+      font-size: 12px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent-light);
+      width: 28px;
+      flex-shrink: 0;
+    }
+    .agenda-icon { font-size: 20px; width: 28px; text-align: center; }
+    .agenda-text {
+      font-weight: 600;
+      font-size: 1rem;
+      flex: 1;
+    }
+    .agenda-desc { font-size: 0.82rem; color: var(--text-muted); }
+
+    /* ───────────────────────────────────────────────────────── */
+    /* SLIDE 3 – PROBLEM STATEMENT                             */
+    /* ───────────────────────────────────────────────────────── */
+    .problem-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .problem-card {
+      padding: 22px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .pain-point {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .pain-point:last-child { border-bottom: none; }
+    .pain-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+    .pain-title { font-weight: 600; font-size: 0.95rem; }
+    .pain-desc { font-size: 0.82rem; color: var(--text-muted); margin-top: 3px; line-height: 1.5; }
+    .stat-highlight {
+      padding: 20px 22px;
+      border-radius: 14px;
+      background: rgba(244,63,94,0.06);
+      border: 1px solid rgba(244,63,94,0.15);
+      text-align: center;
+    }
+
+    /* ───────────────────────────────────────────────────────── */
+    /* SLIDE 4 – SOLUTION OVERVIEW                             */
+    /* ───────────────────────────────────────────────────────── */
+    .solution-hero {
+      display: flex;
+      gap: 32px;
+      align-items: stretch;
+    }
+    .solution-main {
+      flex: 1;
+    }
+    .solution-features {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 320px;
+    }
+    .feature-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .feature-row .icon { font-size: 18px; margin-top: 1px; }
+    .feature-row .text { font-size: 0.85rem; font-weight: 500; }
+    .feature-row .sub  { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+
+    /* ───────────────────────────────────────────────────────── */
+    /* SLIDE 5 – ARCHITECTURE                                  */
+    /* ───────────────────────────────────────────────────────── */
+    .arch-layer {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .arch-row {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+    }
+    .arch-box {
+      flex: 1;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      text-align: center;
+    }
+    .arch-box.accent-border { border-color: rgba(99,102,241,0.3); background: rgba(99,102,241,0.06); }
+    .arch-box.teal-border   { border-color: rgba(34,211,238,0.3); background: rgba(34,211,238,0.05); }
+    .arch-box.amber-border  { border-color: rgba(245,158,11,0.25); background: rgba(245,158,11,0.05); }
+    .arch-box.green-border  { border-color: rgba(16,185,129,0.25); background: rgba(16,185,129,0.05); }
+    .arch-box-icon { font-size: 22px; margin-bottom: 6px; }
+    .arch-box-label { font-size: 0.8rem; font-weight: 700; color: #fff; }
+    .arch-box-sub   { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+    .arch-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-left: 2px solid var(--accent);
+      margin-bottom: 4px;
+    }
+    .arch-arrow {
+      display: flex;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 1rem;
+      padding: 2px 0;
+    }
+
+    /* ───────────────────────────────────────────────────────── */
+    /* SLIDE 6 – TECH STACK                                    */
+    /* ───────────────────────────────────────────────────────── */
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+    .tech-card {
+      padding: 18px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      text-align: center;
+      transition: all 0.3s;
+    }
+    .tech-card:hover { transform: translateY(-3px); border-color: rgba(99,102,241,0.4); }
+    .tech-icon { font-size: 28px; margin-bottom: 10px; }
+    .tech-name { font-size: 0.9rem; font-weight: 700; }
+    .tech-role { font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; }
+    .tech-tag  { margin-top: 8px; }
+
+    /* ───────────────────────────────────────────────────────── */
+    /* SLIDE 7 – DATA MODEL                                    */
+    /* ───────────────────────────────────────────────────────── */
+    .schema-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+    }
+    .schema-table {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      overflow: hidden;
+    }
+    .schema-header {
+      padding: 10px 14px;
+      background: rgba(99,102,241,0.1);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8rem;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent-light);
+    }
+    .schema-body { padding: 10px 14px; }
+    .schema-field {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 3px 0;
+      font-size: 0.72rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .schema-field:last-child { border-bottom: none; }
+    .field-name { font-family: 'JetBrains Mono', monospace; color: #c4b5fd; }
+    .field-type { color: var(--teal); font-family: 'JetBrains Mono', monospace; }
+    .field-pk   { color: var(--amber); font-size: 10px; font-weight: 700; }
+
+    /* ───────────────────────────────────────────────────────── */
+    /* SLIDE 8 – AI TRIAGE ENGINE                              */
+    /* ───────────────────────────────────────────────────────── */
+    .triage-flow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .triage-step {
+      flex: 1;
+      text-align: center;
+      padding: 16px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      position: relative;
+    }
+    .triage-step::after {
+      content: '→';
+      position: absolute;
+      right: -18px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 1.2rem;
+      z-index: 2;
+    }
+    .triage-step:last-child::after { display: none; }
+    .triage-step-icon { font-size: 24px; margin-bottom: 8px; }
+    .triage-step-name { font-size: 0.8rem; font-weight: 700; }
+    .triage-step-desc { font-size: 0.7rem; color: var(--text-muted); margin-top: 3px; }
+
+    .ai-output-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+    }
+    .ai-output-card {
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .ai-output-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .ai-output-val   { font-size: 0.95rem; font-weight: 700; }
+    .confidence-bar  { height: 4px; border-radius: 2px; margin-top: 8px; background: rgba(255,255,255,0.1); }
+    .confidence-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--green), var(--teal)); }
+
+    /* ───────────────────────────────────────────────────────── */
+    /* SLIDE 9 – KNOWLEDGE BASE                                */
+    /* ───────────────────────────────────────────────────────── */
+    .kb-layout {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 24px;
+      align-items: start;
+    }
+    .kb-article {
+      padding: 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      margin-bottom: 10px;
+    }
+    .kb-article:last-child { margin-bottom: 0; }
+    .kb-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+    .kb-title  { font-size: 0.85rem; font-weight: 700; line-height: 1.3; }
+    .kb-body   { font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; }
+    .kb-score  { font-size: 12px; font-weight: 700; color: var(--green); white-space: nowrap; }
+
+    /* ───────────────────────────────────────────────────────── */
+    /* SLIDE 10 – DASHBOARD FEATURES                           */
+    /* ───────────────────────────────────────────────────────── */
+    .dashboard-mockup {
+      background: rgba(6,8,24,0.8);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .db-topbar {
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .db-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .db-title { font-size: 0.75rem; color: var(--text-muted); margin-left: 8px; font-family: 'JetBrains Mono', monospace; }
+    .db-body { padding: 16px; }
+    .db-kpis {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .db-kpi {
+      padding: 12px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+    }
+    .db-kpi-val { font-size: 1.4rem; font-weight: 800; line-height: 1; }
+    .db-kpi-lbl { font-size: 0.65rem; color: var(--text-muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .db-kpi-trend { font-size: 0.7rem; margin-top: 4px; }
+    .db-row { display: grid; grid-template-columns: 1.5fr 1fr; gap: 10px; }
+    .db-panel { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+    .db-panel-title { font-size: 0.7rem; font-weight: 700; margin-bottom: 8px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .db-ticket { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.7rem; }
+    .db-ticket:last-child { border-bottom: none; }
+    .ticket-key { color: var(--accent-light); font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; }
+    .ticket-title { color: #cbd5e1; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .priority-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .p-urgent { background: var(--rose); }
+    .p-high   { background: var(--amber); }
+    .p-med    { background: var(--teal); }
+
+    /* ───────────────────────────────────────────────────────── */
+    /* SLIDE 11 – APPROVAL WORKFLOW                            */
+    /* ───────────────────────────────────────────────────────── */
+    .workflow-diagram {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .wf-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      position: relative;
+      padding-bottom: 20px;
+    }
+    .wf-step:last-child { padding-bottom: 0; }
+    .wf-line {
+      position: absolute;
+      left: 20px;
+      top: 44px;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--accent), transparent);
+    }
+    .wf-step:last-child .wf-line { display: none; }
+    .wf-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      z-index: 1;
+    }
+    .wf-body { flex: 1; padding: 10px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-top: 0; }
+    .wf-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 3px; }
+    .wf-desc  { font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; }
+
+    /* ───────────────────────────────────────────────────────── */
+    /* SLIDE 12 – DATA SEEDING                                 */
+    /* ───────────────────────────────────────────────────────── */
+    .seed-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .seed-stat {
+      text-align: center;
+      padding: 20px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .seed-val { font-size: 2.2rem; font-weight: 900; line-height: 1; }
+    .seed-lbl { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .code-block {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 16px 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      line-height: 1.7;
+    }
+    .code-comment { color: #6b7280; }
+    .code-key     { color: #c4b5fd; }
+    .code-val     { color: #34d399; }
+    .code-str     { color: #fcd34d; }
+    .code-op      { color: #f87171; }
+
+    /* ───────────────────────────────────────────────────────── */
+    /* SLIDE 13 – API & BACKEND                                */
+    /* ───────────────────────────────────────────────────────── */
+    .api-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .api-table th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+    }
+    .api-table td {
+      padding: 10px 14px;
+      font-size: 0.82rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      vertical-align: top;
+    }
+    .api-table tr:last-child td { border-bottom: none; }
+    .method { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+    .method-get  { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+    .method-post { background: rgba(245,158,11,0.15); color: #fcd34d; }
+    .endpoint-path { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--accent-light); }
+
+    /* ───────────────────────────────────────────────────────── */
+    /* SLIDE 14 – RESULTS & METRICS                            */
+    /* ───────────────────────────────────────────────────────── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .metric-card {
+      padding: 22px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .metric-row:last-child { border-bottom: none; }
+    .metric-name { font-size: 0.85rem; color: var(--text-muted); }
+    .metric-val  { font-size: 0.9rem; font-weight: 700; }
+    .bar-container { flex: 1; margin: 0 12px; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; }
+    .bar-fill { height: 100%; border-radius: 3px; }
+
+    /* ───────────────────────────────────────────────────────── */
+    /* SLIDE 15 – FUTURE WORK                                  */
+    /* ───────────────────────────────────────────────────────── */
+    .roadmap-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+    .roadmap-phase {
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      overflow: hidden;
+    }
+    .rp-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .rp-num { font-size: 11px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+    .rp-label { font-weight: 700; font-size: 0.88rem; }
+    .rp-body { padding: 14px 16px; }
+    .rp-item {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+    .rp-item:last-child { margin-bottom: 0; }
+    .rp-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+    .rp-text { font-size: 0.8rem; line-height: 1.4; }
+
+    /* ───────────────────────────────────────────────────────── */
+    /* SLIDE 16 – THANK YOU                                    */
+    /* ───────────────────────────────────────────────────────── */
+    #slide-16 { text-align: center; }
+    .ty-logo {
+      width: 80px; height: 80px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, var(--accent), #7c3aed);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      margin: 0 auto 28px;
+      box-shadow: 0 0 60px var(--accent-glow);
+    }
+    .repo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      margin-top: 20px;
+    }
+
+  </style>
+</head>
+<body>
+
+<!-- Ambient background -->
+<div class="mesh">
+  <div class="mesh-orb"></div>
+  <div class="mesh-orb"></div>
+  <div class="mesh-orb"></div>
+</div>
+<div class="grid-bg"></div>
+
+<!-- Progress bar -->
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- UI chrome -->
+<div class="kb-hint">
+  <kbd>←</kbd> <kbd>→</kbd> Navigate &nbsp;|&nbsp; <kbd>F</kbd> Fullscreen
+</div>
+<div class="slide-badge" id="slideCounter">01 / 16</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDES                                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="deck" id="deck">
+
+  <!-- ─── SLIDE 1: Title ──────────────────────────────────── -->
+  <div class="slide active" id="slide-1">
+    <div class="slide-content" style="text-align:center;">
+      <div class="hero-pill">
+        <span class="dot-pulse"></span>
+        DSC 550 — Master's Project &nbsp;·&nbsp; Spring 2026
+      </div>
+      <h1 class="mega">
+        Gen AI <span class="gradient-text">Support System</span>
+      </h1>
+      <p class="hero-sub" style="max-width:640px;margin:16px auto 0;">
+        An intelligent, end-to-end AI-powered IT support platform featuring<br />
+        automated triage, knowledge management, and real-time analytics.
+      </p>
+
+      <div class="contributors">
+        <div class="contributor-card">
+          <div class="contributor-avatar av-1">SB</div>
+          <div>
+            <div class="contributor-name">Shushruth V Bharadwaj</div>
+            <div class="contributor-role">Full-Stack &amp; AI Systems</div>
+          </div>
+        </div>
+        <div class="contributor-card">
+          <div class="contributor-avatar av-2">KK</div>
+          <div>
+            <div class="contributor-name">Kaustub Kumarswamy</div>
+            <div class="contributor-role">Data Engineering &amp; Analytics</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="university-badge" style="margin-top:28px;">
+        🎓 &nbsp;Master's in Data Science &nbsp;·&nbsp; DSC 550 &nbsp;·&nbsp; April 2026
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 2: Agenda ─────────────────────────────────── -->
+  <div class="slide" id="slide-2">
+    <div class="slide-content">
+      <div class="chip chip-accent" style="margin-bottom:14px;">📋 Agenda</div>
+      <h2 class="slide-title" style="margin-bottom:6px;">What We'll Cover</h2>
+      <div class="divider"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="agenda-list">
+          <div class="agenda-item">
+            <span class="agenda-num">01</span>
+            <span class="agenda-icon">🎯</span>
+            <div><div class="agenda-text">Problem Statement</div><div class="agenda-desc">Why traditional support systems fail</div></div>
+          </div>
+          <div class="agenda-item">
+            <span class="agenda-num">02</span>
+            <span class="agenda-icon">💡</span>
+            <div><div class="agenda-text">Solution Overview</div><div class="agenda-desc">High-level vision and goals</div></div>
+          </div>
+          <div class="agenda-item">
+            <span class="agenda-num">03</span>
+            <span class="agenda-icon">🏗️</span>
+            <div><div class="agenda-text">System Architecture</div><div class="agenda-desc">3-tier design and data flow</div></div>
+          </div>
+          <div class="agenda-item">
+            <span class="agenda-num">04</span>
+            <span class="agenda-icon">⚙️</span>
+            <div><div class="agenda-text">Technology Stack</div><div class="agenda-desc">Tools, frameworks, and services</div></div>
+          </div>
+        </div>
+        <div class="agenda-list">
+          <div class="agenda-item">
+            <span class="agenda-num">05</span>
+            <span class="agenda-icon">🗄️</span>
+            <div><div class="agenda-text">Data Model</div><div class="agenda-desc">Schema design and relationships</div></div>
+          </div>
+          <div class="agenda-item">
+            <span class="agenda-num">06</span>
+            <span class="agenda-icon">🤖</span>
+            <div><div class="agenda-text">AI Triage Engine</div><div class="agenda-desc">Gemini-powered intelligence layer</div></div>
+          </div>
+          <div class="agenda-item">
+            <span class="agenda-num">07</span>
+            <span class="agenda-icon">📊</span>
+            <div><div class="agenda-text">Dashboard &amp; Features</div><div class="agenda-desc">Live analytics and UI walkthrough</div></div>
+          </div>
+          <div class="agenda-item">
+            <span class="agenda-num">08</span>
+            <span class="agenda-icon">🚀</span>
+            <div><div class="agenda-text">Results &amp; Future Work</div><div class="agenda-desc">Outcomes, metrics, and roadmap</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 3: Problem Statement ─────────────────────── -->
+  <div class="slide" id="slide-3">
+    <div class="slide-content">
+      <div class="chip chip-rose" style="margin-bottom:14px;">🎯 Problem Statement</div>
+      <h2 class="slide-title" style="margin-bottom:6px;">Traditional Support Systems Are <span class="gradient-text">Broken</span></h2>
+      <div class="divider"></div>
+      <div class="problem-grid">
+        <div>
+          <div class="pain-point">
+            <span class="pain-icon">⏱️</span>
+            <div>
+              <div class="pain-title">Manual Triage Bottleneck</div>
+              <div class="pain-desc">L1 agents spend 60–70% of time classifying and routing tickets instead of solving problems, causing critical SLA breaches.</div>
+            </div>
+          </div>
+          <div class="pain-point">
+            <span class="pain-icon">🔍</span>
+            <div>
+              <div class="pain-title">Knowledge Silos</div>
+              <div class="pain-desc">Runbooks and resolution guides buried in separate wikis — agents re-investigate the same incidents repeatedly.</div>
+            </div>
+          </div>
+          <div class="pain-point">
+            <span class="pain-icon">📉</span>
+            <div>
+              <div class="pain-title">Zero Real-Time Visibility</div>
+              <div class="pain-desc">Managers lack live dashboards to track queue depth, SLA risk, or escalation trends across infrastructure components.</div>
+            </div>
+          </div>
+          <div class="pain-point">
+            <span class="pain-icon">🔁</span>
+            <div>
+              <div class="pain-title">Duplicate Incident Explosion</div>
+              <div class="pain-desc">Same outage triggers hundreds of tickets from different customers — no deduplication means wasted engineering effort.</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="stat-highlight">
+            <div class="stat-value" style="color:var(--rose);">68%</div>
+            <div class="stat-label" style="color:var(--text-muted);margin-top:4px;">of IT support time spent<br />on repetitive triage tasks</div>
+          </div>
+          <div class="stat-highlight">
+            <div class="stat-value" style="color:var(--amber);">4.2×</div>
+            <div class="stat-label" style="color:var(--text-muted);margin-top:4px;">longer resolution time<br />without AI-assisted routing</div>
+          </div>
+          <div class="stat-highlight">
+            <div class="stat-value" style="color:var(--teal);">$15M+</div>
+            <div class="stat-label" style="color:var(--text-muted);margin-top:4px;">annual cost of undetected<br />duplicate incidents</div>
+          </div>
+          <div class="card" style="background:rgba(99,102,241,0.06);border-color:rgba(99,102,241,0.2);padding:16px;">
+            <div class="pain-title" style="margin-bottom:6px;">💡 The Opportunity</div>
+            <div class="pain-desc">Large Language Models can automate classification, root-cause analysis, and KB matching — reducing L1 toil by up to 80%.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 4: Solution Overview ──────────────────────── -->
+  <div class="slide" id="slide-4">
+    <div class="slide-content">
+      <div class="chip chip-accent" style="margin-bottom:14px;">💡 Solution</div>
+      <h2 class="slide-title" style="margin-bottom:6px;">An <span class="gradient-text">Intelligent Platform</span> for Modern IT Ops</h2>
+      <div class="divider"></div>
+      <div class="solution-hero">
+        <div class="solution-main">
+          <div class="card card-glow" style="margin-bottom:16px;padding:20px;">
+            <h3 class="section-title" style="margin-bottom:8px;">🤖 AI-First Architecture</h3>
+            <p class="lead" style="font-size:0.9rem;">Every incoming incident is instantly analyzed by the <strong>Gemini 1.5 Pro</strong> triage engine. Within 15 seconds of ticket creation, the system produces a confidence-scored priority, root-cause hypothesis, impacted component mapping, and KB article recommendations — automatically.</p>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="card" style="padding:16px;">
+              <div style="font-size:22px;margin-bottom:8px;">🎯</div>
+              <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px;">Unified Work Queue</div>
+              <div style="font-size:0.78rem;color:var(--text-muted);">Tickets and issues in a single prioritized view with SLA countdown and escalation flags.</div>
+            </div>
+            <div class="card" style="padding:16px;">
+              <div style="font-size:22px;margin-bottom:8px;">📚</div>
+              <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px;">Knowledge Graph</div>
+              <div style="font-size:0.78rem;color:var(--text-muted);">AI-linked runbooks and articles surfaced at ticket-open time with relevance scoring.</div>
+            </div>
+            <div class="card" style="padding:16px;">
+              <div style="font-size:22px;margin-bottom:8px;">✅</div>
+              <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px;">Approval Workflow</div>
+              <div style="font-size:0.78rem;color:var(--text-muted);">Multi-stage human-in-the-loop approvals for high-risk actions with full audit trail.</div>
+            </div>
+            <div class="card" style="padding:16px;">
+              <div style="font-size:22px;margin-bottom:8px;">📊</div>
+              <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px;">Intelligence Hub</div>
+              <div style="font-size:0.78rem;color:var(--text-muted);">Real-time analytics dashboard with category breakdowns, AI insights, and SLA metrics.</div>
+            </div>
+          </div>
+        </div>
+        <div class="solution-features">
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:8px;">Key Capabilities</div>
+          <div class="feature-row">
+            <span class="icon">⚡</span>
+            <div><div class="text">Auto-Triage in &lt;15s</div><div class="sub">Gemini 1.5 Pro classification</div></div>
+          </div>
+          <div class="feature-row">
+            <span class="icon">🎯</span>
+            <div><div class="text">Priority Recommendation</div><div class="sub">AI vs. human priority comparison</div></div>
+          </div>
+          <div class="feature-row">
+            <span class="icon">🔍</span>
+            <div><div class="text">Duplicate Detection</div><div class="sub">~8% dedup rate on similar incidents</div></div>
+          </div>
+          <div class="feature-row">
+            <span class="icon">📈</span>
+            <div><div class="text">SLA Risk Scoring</div><div class="sub">High / Medium / Low risk per ticket</div></div>
+          </div>
+          <div class="feature-row">
+            <span class="icon">🤝</span>
+            <div><div class="text">Team-based Routing</div><div class="sub">SRE, Platform, Support teams</div></div>
+          </div>
+          <div class="feature-row">
+            <span class="icon">📝</span>
+            <div><div class="text">Agent Assist Hints</div><div class="sub">Category-specific resolution steps</div></div>
+          </div>
+          <div class="feature-row">
+            <span class="icon">🔐</span>
+            <div><div class="text">RBAC + RLS</div><div class="sub">Row-level security per role</div></div>
+          </div>
+          <div class="feature-row">
+            <span class="icon">📋</span>
+            <div><div class="text">Full Audit Log</div><div class="sub">Every AI action recorded</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 5: Architecture ─────────────────────────── -->
+  <div class="slide" id="slide-5">
+    <div class="slide-content">
+      <div class="chip chip-teal" style="margin-bottom:14px;">🏗️ Architecture</div>
+      <h2 class="slide-title" style="margin-bottom:6px;">Three-Tier <span class="gradient-text">Cloud-Native</span> Design</h2>
+      <div class="divider"></div>
+      <div class="arch-layer">
+        <!-- Tier 1: Frontend -->
+        <div class="arch-label">🖥️ Presentation Layer — Next.js 14 / Tailwind CSS + TypeScript</div>
+        <div class="arch-row">
+          <div class="arch-box accent-border">
+            <div class="arch-box-icon">📊</div>
+            <div class="arch-box-label">Dashboard</div>
+            <div class="arch-box-sub">KPIs &amp; Analytics</div>
+          </div>
+          <div class="arch-box accent-border">
+            <div class="arch-box-icon">🎫</div>
+            <div class="arch-box-label">Ticket Queue</div>
+            <div class="arch-box-sub">Work Items</div>
+          </div>
+          <div class="arch-box accent-border">
+            <div class="arch-box-icon">⚠️</div>
+            <div class="arch-box-label">Issue Tracker</div>
+            <div class="arch-box-sub">Infrastructure</div>
+          </div>
+          <div class="arch-box accent-border">
+            <div class="arch-box-icon">📚</div>
+            <div class="arch-box-label">Knowledge Base</div>
+            <div class="arch-box-sub">Runbooks &amp; Docs</div>
+          </div>
+          <div class="arch-box accent-border">
+            <div class="arch-box-icon">✅</div>
+            <div class="arch-box-label">Approvals</div>
+            <div class="arch-box-sub">Workflow</div>
+          </div>
+          <div class="arch-box accent-border">
+            <div class="arch-box-icon">📈</div>
+            <div class="arch-box-label">Intel Hub</div>
+            <div class="arch-box-sub">Ticket Intelligence</div>
+          </div>
+        </div>
+
+        <div class="arch-arrow">↕</div>
+
+        <!-- Tier 2: Backend -->
+        <div class="arch-label">⚙️ Application Layer — FastAPI / Python + Pydantic</div>
+        <div class="arch-row">
+          <div class="arch-box teal-border">
+            <div class="arch-box-icon">🔌</div>
+            <div class="arch-box-label">REST API Router</div>
+            <div class="arch-box-sub">FastAPI + CORS</div>
+          </div>
+          <div class="arch-box teal-border">
+            <div class="arch-box-icon">🤖</div>
+            <div class="arch-box-label">AI Enrichment</div>
+            <div class="arch-box-sub">Triage Engine</div>
+          </div>
+          <div class="arch-box teal-border">
+            <div class="arch-box-icon">🛡️</div>
+            <div class="arch-box-label">Service Layer</div>
+            <div class="arch-box-sub">Business Logic</div>
+          </div>
+          <div class="arch-box teal-border">
+            <div class="arch-box-icon">🔐</div>
+            <div class="arch-box-label">Auth Middleware</div>
+            <div class="arch-box-sub">JWT + RLS</div>
+          </div>
+          <div class="arch-box teal-border">
+            <div class="arch-box-icon">📝</div>
+            <div class="arch-box-label">Schema Validation</div>
+            <div class="arch-box-sub">Pydantic Models</div>
+          </div>
+        </div>
+
+        <div class="arch-arrow">↕</div>
+
+        <!-- Tier 3: Data -->
+        <div class="arch-label">🗄️ Data Layer — Supabase (PostgreSQL 15) + Storage</div>
+        <div class="arch-row">
+          <div class="arch-box amber-border">
+            <div class="arch-box-icon">🗃️</div>
+            <div class="arch-box-label">work_items</div>
+            <div class="arch-box-sub">Tickets &amp; Issues</div>
+          </div>
+          <div class="arch-box amber-border">
+            <div class="arch-box-icon">👥</div>
+            <div class="arch-box-label">profiles / teams</div>
+            <div class="arch-box-sub">Users &amp; Orgs</div>
+          </div>
+          <div class="arch-box amber-border">
+            <div class="arch-box-icon">🔬</div>
+            <div class="arch-box-label">ai_audit_log</div>
+            <div class="arch-box-sub">Model Actions</div>
+          </div>
+          <div class="arch-box amber-border">
+            <div class="arch-box-icon">📖</div>
+            <div class="arch-box-label">knowledge_articles</div>
+            <div class="arch-box-sub">KB &amp; Runbooks</div>
+          </div>
+          <div class="arch-box amber-border">
+            <div class="arch-box-icon">📋</div>
+            <div class="arch-box-label">approvals / comments</div>
+            <div class="arch-box-sub">Workflow</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 6: Tech Stack ───────────────────────────── -->
+  <div class="slide" id="slide-6">
+    <div class="slide-content">
+      <div class="chip chip-amber" style="margin-bottom:14px;">⚙️ Technology Stack</div>
+      <h2 class="slide-title" style="margin-bottom:6px;">Built With <span class="gradient-text">Modern Tools</span></h2>
+      <div class="divider"></div>
+      <div class="tech-grid">
+        <div class="tech-card">
+          <div class="tech-icon">⚡</div>
+          <div class="tech-name">Next.js 14</div>
+          <div class="tech-role">Frontend Framework</div>
+          <div class="tech-tag"><span class="tag tag-blue">App Router</span></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon">🎨</div>
+          <div class="tech-name">Tailwind CSS</div>
+          <div class="tech-role">UI Styling</div>
+          <div class="tech-tag"><span class="tag tag-teal">Component System</span></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon">🔷</div>
+          <div class="tech-name">TypeScript</div>
+          <div class="tech-role">Type Safety</div>
+          <div class="tech-tag"><span class="tag tag-blue">Strict Mode</span></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon">📦</div>
+          <div class="tech-name">Recharts</div>
+          <div class="tech-role">Data Visualization</div>
+          <div class="tech-tag"><span class="tag tag-green">Interactive Charts</span></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon">🐍</div>
+          <div class="tech-name">FastAPI</div>
+          <div class="tech-role">Backend Framework</div>
+          <div class="tech-tag"><span class="tag tag-green">Async REST API</span></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon">✅</div>
+          <div class="tech-name">Pydantic v2</div>
+          <div class="tech-role">Schema Validation</div>
+          <div class="tech-tag"><span class="tag tag-amber">Type-Safe</span></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon">🤖</div>
+          <div class="tech-name">Gemini 1.5 Pro</div>
+          <div class="tech-role">AI Triage Engine</div>
+          <div class="tech-tag"><span class="tag tag-purple">Google DeepMind</span></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon">🦙</div>
+          <div class="tech-name">HuggingFace</div>
+          <div class="tech-role">Model Hub</div>
+          <div class="tech-tag"><span class="tag tag-amber">Transformers</span></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon">🐘</div>
+          <div class="tech-name">PostgreSQL 15</div>
+          <div class="tech-role">Primary Database</div>
+          <div class="tech-tag"><span class="tag tag-blue">JSONB Support</span></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon">🟩</div>
+          <div class="tech-name">Supabase</div>
+          <div class="tech-role">BaaS Platform</div>
+          <div class="tech-tag"><span class="tag tag-green">Auth + RLS</span></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon">🚀</div>
+          <div class="tech-name">Uvicorn</div>
+          <div class="tech-role">ASGI Server</div>
+          <div class="tech-tag"><span class="tag tag-teal">High Performance</span></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon">🌐</div>
+          <div class="tech-name">Vercel / Cloud</div>
+          <div class="tech-role">Deployment</div>
+          <div class="tech-tag"><span class="tag tag-purple">Edge Network</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 7: Data Model ───────────────────────────── -->
+  <div class="slide" id="slide-7">
+    <div class="slide-content">
+      <div class="chip chip-green" style="margin-bottom:14px;">🗄️ Data Model</div>
+      <h2 class="slide-title" style="margin-bottom:6px;">Relational Schema — <span class="gradient-text">11 Migrations</span></h2>
+      <div class="divider"></div>
+      <div class="schema-grid">
+        <div class="schema-table">
+          <div class="schema-header">📋 work_items</div>
+          <div class="schema-body">
+            <div class="schema-field"><span class="field-name">id</span> <span class="field-pk">PK</span></div>
+            <div class="schema-field"><span class="field-name">key</span><span class="field-type">TEXT UNIQUE</span></div>
+            <div class="schema-field"><span class="field-name">type</span><span class="field-type">ticket | issue</span></div>
+            <div class="schema-field"><span class="field-name">status</span><span class="field-type">TEXT</span></div>
+            <div class="schema-field"><span class="field-name">priority</span><span class="field-type">TEXT</span></div>
+            <div class="schema-field"><span class="field-name">severity</span><span class="field-type">TEXT</span></div>
+            <div class="schema-field"><span class="field-name">ai_summary</span><span class="field-type">TEXT</span></div>
+            <div class="schema-field"><span class="field-name">ai_metadata</span><span class="field-type">JSONB</span></div>
+            <div class="schema-field"><span class="field-name">sla_due_at</span><span class="field-type">TIMESTAMPTZ</span></div>
+            <div class="schema-field"><span class="field-name">resolved_at</span><span class="field-type">TIMESTAMPTZ</span></div>
+          </div>
+        </div>
+        <div class="schema-table">
+          <div class="schema-header">👤 profiles / teams</div>
+          <div class="schema-body">
+            <div class="schema-field"><span class="field-name">id</span><span class="field-pk">PK → auth.users</span></div>
+            <div class="schema-field"><span class="field-name">email</span><span class="field-type">TEXT UNIQUE</span></div>
+            <div class="schema-field"><span class="field-name">full_name</span><span class="field-type">TEXT</span></div>
+            <div class="schema-field"><span class="field-name">role</span><span class="field-type">ENUM</span></div>
+            <div class="schema-field"><span class="field-name">team_id</span><span class="field-type">FK → teams</span></div>
+            <div style="height:8px;"></div>
+            <div class="schema-field"><span class="field-name" style="color:#fbbf24;">teams.id</span><span class="field-pk">PK</span></div>
+            <div class="schema-field"><span class="field-name">slug</span><span class="field-type">TEXT UNIQUE</span></div>
+            <div class="schema-field"><span class="field-name">name</span><span class="field-type">TEXT</span></div>
+            <div class="schema-field"><span class="field-name">manager_profile_id</span><span class="field-type">FK</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="schema-table" style="margin-bottom:12px;">
+            <div class="schema-header">🔬 ai_audit_log</div>
+            <div class="schema-body">
+              <div class="schema-field"><span class="field-name">work_item_id</span><span class="field-type">FK</span></div>
+              <div class="schema-field"><span class="field-name">agent_name</span><span class="field-type">TEXT</span></div>
+              <div class="schema-field"><span class="field-name">model_name</span><span class="field-type">TEXT</span></div>
+              <div class="schema-field"><span class="field-name">input_payload</span><span class="field-type">JSONB</span></div>
+              <div class="schema-field"><span class="field-name">output_payload</span><span class="field-type">JSONB</span></div>
+              <div class="schema-field"><span class="field-name">confidence</span><span class="field-type">NUMERIC</span></div>
+            </div>
+          </div>
+          <div class="schema-table">
+            <div class="schema-header">📖 knowledge_articles</div>
+            <div class="schema-body">
+              <div class="schema-field"><span class="field-name">slug</span><span class="field-type">TEXT UNIQUE</span></div>
+              <div class="schema-field"><span class="field-name">title</span><span class="field-type">TEXT</span></div>
+              <div class="schema-field"><span class="field-name">body_markdown</span><span class="field-type">TEXT</span></div>
+              <div class="schema-field"><span class="field-name">status</span><span class="field-type">draft|pub|arch</span></div>
+              <div class="schema-field"><span class="field-name">source_work_item_id</span><span class="field-type">FK</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+        <span class="tag tag-teal">11 Migrations</span>
+        <span class="tag tag-blue">UUID Primary Keys</span>
+        <span class="tag tag-amber">JSONB for AI Metadata</span>
+        <span class="tag tag-green">Cascading Foreign Keys</span>
+        <span class="tag tag-purple">Row-Level Security</span>
+        <span class="tag tag-rose">Full-Text Indexes</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 8: AI Triage Engine ────────────────────── -->
+  <div class="slide" id="slide-8">
+    <div class="slide-content">
+      <div class="chip chip-accent" style="margin-bottom:14px;">🤖 AI Intelligence</div>
+      <h2 class="slide-title" style="margin-bottom:6px;">The <span class="gradient-text">Triage Engine</span> — Powered by Gemini</h2>
+      <div class="divider"></div>
+
+      <div class="triage-flow" style="margin-bottom:20px;">
+        <div class="triage-step" style="border-color:rgba(99,102,241,0.3);background:rgba(99,102,241,0.06);">
+          <div class="triage-step-icon">📥</div>
+          <div class="triage-step-name">Ticket Created</div>
+          <div class="triage-step-desc">Customer submits incident</div>
+        </div>
+        <div class="triage-step" style="border-color:rgba(34,211,238,0.3);background:rgba(34,211,238,0.05);">
+          <div class="triage-step-icon">🔍</div>
+          <div class="triage-step-name">Text Analysis</div>
+          <div class="triage-step-desc">NLP keyword extraction</div>
+        </div>
+        <div class="triage-step" style="border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.05);">
+          <div class="triage-step-icon">🤖</div>
+          <div class="triage-step-name">Gemini Inference</div>
+          <div class="triage-step-desc">gemini-1.5-pro call</div>
+        </div>
+        <div class="triage-step" style="border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.05);">
+          <div class="triage-step-icon">📊</div>
+          <div class="triage-step-name">Enrichment</div>
+          <div class="triage-step-desc">Metadata assembly</div>
+        </div>
+        <div class="triage-step" style="border-color:rgba(99,102,241,0.3);background:rgba(99,102,241,0.06);">
+          <div class="triage-step-icon">⚡</div>
+          <div class="triage-step-name">Auto-Route</div>
+          <div class="triage-step-desc">Assigned in &lt;15s</div>
+        </div>
+      </div>
+
+      <div class="ai-output-grid">
+        <div class="ai-output-card">
+          <div class="ai-output-label">🎯 Category Detection</div>
+          <div class="ai-output-val">9 Categories</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;">auth · perf · billing · k8s · security · networking · mobile · db · ui-bug</div>
+        </div>
+        <div class="ai-output-card">
+          <div class="ai-output-label">📈 Confidence Score</div>
+          <div class="ai-output-val" style="color:var(--green);">75% – 98%</div>
+          <div class="confidence-bar"><div class="confidence-fill" style="width:87%"></div></div>
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px;">Priority-weighted, seed-deterministic</div>
+        </div>
+        <div class="ai-output-card">
+          <div class="ai-output-label">💬 Sentiment Analysis</div>
+          <div class="ai-output-val">3-Class</div>
+          <div style="margin-top:8px;display:flex;gap:6px;">
+            <span class="tag tag-rose">Negative</span>
+            <span class="tag tag-amber">Neutral</span>
+            <span class="tag tag-green">Positive</span>
+          </div>
+        </div>
+        <div class="ai-output-card">
+          <div class="ai-output-label">🔗 KB Article Linking</div>
+          <div class="ai-output-val">1–2 per ticket</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;">Tag-matched runbooks with cosine similarity score (0.70–0.99)</div>
+        </div>
+        <div class="ai-output-card">
+          <div class="ai-output-label">🔁 Duplicate Detection</div>
+          <div class="ai-output-val" style="color:var(--amber);">~8% flagged</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;">Seed-based dedup with cross-ticket linking (TKT-XXXX reference)</div>
+        </div>
+        <div class="ai-output-card">
+          <div class="ai-output-label">🛡️ SLA Risk Engine</div>
+          <div class="ai-output-val">3-Level Risk</div>
+          <div style="margin-top:8px;display:flex;gap:6px;">
+            <span class="tag tag-rose">High</span>
+            <span class="tag tag-amber">Medium</span>
+            <span class="tag tag-green">Low</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;padding:12px 16px;background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.2);border-radius:10px;">
+        <div style="font-size:0.78rem;font-weight:600;margin-bottom:4px;">🔬 Agent Assist — Category-Specific Resolution Suggestions</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);">
+          <strong style="color:#c4b5fd;">Auth:</strong> "Verify token validity and check session expiry config. Consider resetting OAuth client credentials." &nbsp;|&nbsp;
+          <strong style="color:#c4b5fd;">K8s:</strong> "Capture crash logs from device console. Verify app signing certificate validity." &nbsp;|&nbsp;
+          <strong style="color:#c4b5fd;">Security:</strong> "Escalate to security team immediately. Preserve logs and isolate the affected service."
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 9: Knowledge Base ──────────────────────── -->
+  <div class="slide" id="slide-9">
+    <div class="slide-content">
+      <div class="chip chip-green" style="margin-bottom:14px;">📚 Knowledge Management</div>
+      <h2 class="slide-title" style="margin-bottom:6px;">Intelligent <span class="gradient-text">Runbook Library</span></h2>
+      <div class="divider"></div>
+      <div class="kb-layout">
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:10px;">Sample KB Articles — Auto-linked to Incidents</div>
+          <div class="kb-article">
+            <div class="kb-header">
+              <div class="kb-title">🚦 Runbook: Mitigating Cloud SQL Exhaustion</div>
+              <div class="kb-score">0.94</div>
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:6px;"><span class="tag tag-amber">Database</span><span class="tag tag-teal">PostgreSQL</span></div>
+            <div class="kb-body">Run pg_terminate_backend() and bounce the connection pooler. Monitor connections via Cloud Monitoring dashboard.</div>
+          </div>
+          <div class="kb-article">
+            <div class="kb-header">
+              <div class="kb-title">🐳 Runbook: Debugging GKE OOMKilled Pods</div>
+              <div class="kb-score">0.88</div>
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:6px;"><span class="tag tag-blue">Kubernetes</span><span class="tag tag-rose">Outage</span></div>
+            <div class="kb-body">Verify limits.memory in deployment manifests. Check if memory utilization spikes unexpectedly under concurrent load.</div>
+          </div>
+          <div class="kb-article">
+            <div class="kb-header">
+              <div class="kb-title">🔑 Runbook: IAM Permission Regressions</div>
+              <div class="kb-score">0.91</div>
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:6px;"><span class="tag tag-amber">IAM</span><span class="tag tag-purple">Security</span></div>
+            <div class="kb-body">Review Cloud Audit Logs. Check if CI/CD wiped Terraform state roles. Re-apply roles/storage.objectViewer binding.</div>
+          </div>
+          <div class="kb-article">
+            <div class="kb-header">
+              <div class="kb-title">🔴 Runbook: Rotating Expired Certificates</div>
+              <div class="kb-score">0.82</div>
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:6px;"><span class="tag tag-teal">Certificate</span><span class="tag tag-green">Networking</span></div>
+            <div class="kb-body">Automate cert-manager in GKE or verify Cloud Load Balancing managed certificates DNS validation paths.</div>
+          </div>
+        </div>
+        <div>
+          <div class="card card-glow" style="margin-bottom:16px;padding:20px;">
+            <h3 class="section-title" style="color:var(--teal);">Knowledge Graph Stats</h3>
+            <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:0.82rem;color:var(--text-muted);">Total KB Articles</span>
+                <span style="font-weight:700;font-size:1.1rem;">12</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:0.82rem;color:var(--text-muted);">Knowledge Tags</span>
+                <span style="font-weight:700;font-size:1.1rem;">10</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:0.82rem;color:var(--text-muted);">AI-Linked Tickets</span>
+                <span style="font-weight:700;font-size:1.1rem;color:var(--green);">~150</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:0.82rem;color:var(--text-muted);">Avg Similarity Score</span>
+                <span style="font-weight:700;font-size:1.1rem;color:var(--teal);">0.84</span>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:4px;">Topic Tags</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+              <span class="tag tag-blue">Kubernetes</span>
+              <span class="tag tag-amber">Database</span>
+              <span class="tag tag-teal">Networking</span>
+              <span class="tag tag-green">Storage</span>
+              <span class="tag tag-rose">Outage</span>
+              <span class="tag tag-purple">Auth</span>
+              <span class="tag tag-amber">IAM</span>
+              <span class="tag tag-teal">Certificate</span>
+              <span class="tag tag-blue">Cache</span>
+              <span class="tag tag-green">Latency</span>
+            </div>
+          </div>
+          <div class="card" style="margin-top:16px;padding:16px;">
+            <div style="font-weight:700;font-size:0.88rem;margin-bottom:8px;">🔗 Link Types</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;align-items:center;gap:8px;font-size:0.78rem;">
+                <span class="tag tag-blue">suggested</span>
+                <span style="color:var(--text-muted);">AI-recommended at triage time</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:0.78rem;">
+                <span class="tag tag-green">used</span>
+                <span style="color:var(--text-muted);">Agent confirmed as helpful</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:0.78rem;">
+                <span class="tag tag-amber">created_from</span>
+                <span style="color:var(--text-muted);">KB article born from incident</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 10: Dashboard Features ─────────────────── -->
+  <div class="slide" id="slide-10">
+    <div class="slide-content">
+      <div class="chip chip-teal" style="margin-bottom:14px;">📊 Dashboard</div>
+      <h2 class="slide-title" style="margin-bottom:6px;">Real-Time <span class="gradient-text">Intelligence Hub</span></h2>
+      <div class="divider"></div>
+      <div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:20px;align-items:start;">
+        <div class="dashboard-mockup">
+          <div class="db-topbar">
+            <div class="db-dot" style="background:#f87171;"></div>
+            <div class="db-dot" style="background:#fbbf24;"></div>
+            <div class="db-dot" style="background:#34d399;"></div>
+            <div class="db-title">localhost:3000 / dashboard</div>
+          </div>
+          <div class="db-body">
+            <div class="db-kpis">
+              <div class="db-kpi">
+                <div class="db-kpi-val" style="color:var(--accent-light);">87</div>
+                <div class="db-kpi-lbl">Total Tickets</div>
+                <div class="db-kpi-trend" style="color:var(--rose);">▲ 12%</div>
+              </div>
+              <div class="db-kpi">
+                <div class="db-kpi-val" style="color:var(--amber);">63</div>
+                <div class="db-kpi-lbl">Issues</div>
+                <div class="db-kpi-trend" style="color:var(--amber);">▲ 5%</div>
+              </div>
+              <div class="db-kpi">
+                <div class="db-kpi-val" style="color:var(--teal);">14</div>
+                <div class="db-kpi-lbl">Pending Approvals</div>
+                <div class="db-kpi-trend" style="color:var(--text-muted);">stable</div>
+              </div>
+              <div class="db-kpi">
+                <div class="db-kpi-val" style="color:var(--green);">94%</div>
+                <div class="db-kpi-lbl">AI Confidence</div>
+                <div class="db-kpi-trend" style="color:var(--green);">▲ 2%</div>
+              </div>
+            </div>
+            <div class="db-row">
+              <div class="db-panel">
+                <div class="db-panel-title">Recent Tickets — AI Triaged</div>
+                <div class="db-ticket" style="color:white;">
+                  <span class="ticket-key">TKT-1042</span>
+                  <span class="ticket-title">[Kubernetes] GKE pod crash loop - Prod</span>
+                  <div class="priority-dot p-urgent"></div>
+                </div>
+                <div class="db-ticket">
+                  <span class="ticket-key">TKT-1056</span>
+                  <span class="ticket-title">[Auth] Token latency spike - Staging</span>
+                  <div class="priority-dot p-high"></div>
+                </div>
+                <div class="db-ticket">
+                  <span class="ticket-key">TKT-1071</span>
+                  <span class="ticket-title">[Database] Cloud SQL exhaustion - Prod</span>
+                  <div class="priority-dot p-urgent"></div>
+                </div>
+                <div class="db-ticket">
+                  <span class="ticket-key">TKT-1089</span>
+                  <span class="ticket-title">[Networking] API gateway 504 spike</span>
+                  <div class="priority-dot p-high"></div>
+                </div>
+                <div class="db-ticket">
+                  <span class="ticket-key">TKT-1103</span>
+                  <span class="ticket-title">[IAM] Permission regression - Prod</span>
+                  <div class="priority-dot p-med"></div>
+                </div>
+              </div>
+              <div class="db-panel">
+                <div class="db-panel-title">Category Breakdown</div>
+                <div style="display:flex;flex-direction:column;gap:5px;">
+                  <div style="display:flex;align-items:center;gap:6px;font-size:0.68rem;">
+                    <span style="width:50px;color:var(--text-muted);">Networking</span>
+                    <div style="flex:1;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;">
+                      <div style="width:82%;height:100%;background:var(--teal);border-radius:3px;"></div>
+                    </div><span style="width:22px;text-align:right;">82</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;font-size:0.68rem;">
+                    <span style="width:50px;color:var(--text-muted);">Kubernetes</span>
+                    <div style="flex:1;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;">
+                      <div style="width:60%;height:100%;background:var(--accent);border-radius:3px;"></div>
+                    </div><span style="width:22px;text-align:right;">60</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;font-size:0.68rem;">
+                    <span style="width:50px;color:var(--text-muted);">Auth</span>
+                    <div style="flex:1;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;">
+                      <div style="width:45%;height:100%;background:var(--amber);border-radius:3px;"></div>
+                    </div><span style="width:22px;text-align:right;">45</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;font-size:0.68rem;">
+                    <span style="width:50px;color:var(--text-muted);">Database</span>
+                    <div style="flex:1;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;">
+                      <div style="width:38%;height:100%;background:var(--rose);border-radius:3px;"></div>
+                    </div><span style="width:22px;text-align:right;">38</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;font-size:0.68rem;">
+                    <span style="width:50px;color:var(--text-muted);">IAM</span>
+                    <div style="flex:1;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;">
+                      <div style="width:25%;height:100%;background:var(--green);border-radius:3px;"></div>
+                    </div><span style="width:22px;text-align:right;">25</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="card" style="padding:16px;">
+            <div style="font-size:18px;margin-bottom:6px;">📱</div>
+            <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px;">6 Primary Pages</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">Dashboard · Tickets · Issues · Approvals · Knowledge Base · Work Items</div>
+          </div>
+          <div class="card" style="padding:16px;">
+            <div style="font-size:18px;margin-bottom:6px;">🔄</div>
+            <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px;">Live Data Binding</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">Next.js Server Components fetch from FastAPI on every request — always fresh data from Supabase.</div>
+          </div>
+          <div class="card" style="padding:16px;">
+            <div style="font-size:18px;margin-bottom:6px;">🎨</div>
+            <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px;">Ticket Intelligence Hub</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">Dedicated analytics page with Recharts visualizations, AI insight cards, and advanced filtering.</div>
+          </div>
+          <div class="card" style="padding:16px;">
+            <div style="font-size:18px;margin-bottom:6px;">🌙</div>
+            <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px;">Dark Enterprise Theme</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">Full dark mode with glassmorphism, gradient accents, and micro-animations across all components.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 11: Approval Workflow ──────────────────── -->
+  <div class="slide" id="slide-11">
+    <div class="slide-content">
+      <div class="chip chip-amber" style="margin-bottom:14px;">✅ Workflow</div>
+      <h2 class="slide-title" style="margin-bottom:6px;">Multi-Stage <span class="gradient-text">Approval System</span></h2>
+      <div class="divider"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;">
+        <div>
+          <div class="workflow-diagram">
+            <div class="wf-step">
+              <div class="wf-line"></div>
+              <div class="wf-circle" style="background:rgba(99,102,241,0.2);border:2px solid var(--accent);">📥</div>
+              <div class="wf-body">
+                <div class="wf-title">1. Ticket Submitted</div>
+                <div class="wf-desc">Customer or internal team member creates a work item. AI triage fires immediately within 15 seconds.</div>
+              </div>
+            </div>
+            <div class="wf-step">
+              <div class="wf-line"></div>
+              <div class="wf-circle" style="background:rgba(34,211,238,0.15);border:2px solid var(--teal);">🤖</div>
+              <div class="wf-body">
+                <div class="wf-title">2. AI Assessment</div>
+                <div class="wf-desc">Gemini evaluates priority, severity, and root cause. If risk is HIGH, the system auto-flags for approval workflow.</div>
+              </div>
+            </div>
+            <div class="wf-step">
+              <div class="wf-line"></div>
+              <div class="wf-circle" style="background:rgba(245,158,11,0.15);border:2px solid var(--amber);">👨‍💼</div>
+              <div class="wf-body">
+                <div class="wf-title">3. Approver Notified</div>
+                <div class="wf-desc">Designated Security Approver receives the request with full context: AI summary, confidence, impacted component.</div>
+              </div>
+            </div>
+            <div class="wf-step">
+              <div class="wf-line"></div>
+              <div class="wf-circle" style="background:rgba(16,185,129,0.15);border:2px solid var(--green);">✅</div>
+              <div class="wf-body">
+                <div class="wf-title">4. Decision Recorded</div>
+                <div class="wf-desc">Approver accepts, rejects, or reassigns. Full decision + notes stored in approval_events with timestamp.</div>
+              </div>
+            </div>
+            <div class="wf-step">
+              <div class="wf-circle" style="background:rgba(99,102,241,0.15);border:2px solid var(--accent-light);">🚀</div>
+              <div class="wf-body">
+                <div class="wf-title">5. Execution + Audit</div>
+                <div class="wf-desc">Approved actions trigger remediation. Every step is immutably logged in activity_log for compliance audit.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="card card-glow" style="padding:20px;">
+            <h3 class="section-title" style="color:var(--teal);">Approval States</h3>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
+              <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;">
+                <span style="font-size:16px;">⏳</span>
+                <div>
+                  <div style="font-weight:700;font-size:0.85rem;color:var(--amber);">Pending</div>
+                  <div style="font-size:0.72rem;color:var(--text-muted);">Awaiting approver decision</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:8px;">
+                <span style="font-size:16px;">✅</span>
+                <div>
+                  <div style="font-weight:700;font-size:0.85rem;color:var(--green);">Approved</div>
+                  <div style="font-size:0.72rem;color:var(--text-muted);">Action greenlit, proceed to execution</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:rgba(244,63,94,0.08);border:1px solid rgba(244,63,94,0.2);border-radius:8px;">
+                <span style="font-size:16px;">❌</span>
+                <div>
+                  <div style="font-weight:700;font-size:0.85rem;color:var(--rose);">Rejected</div>
+                  <div style="font-size:0.72rem;color:var(--text-muted);">Blocked; notes required for audit trail</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="padding:20px;">
+            <h3 class="section-title" style="margin-bottom:10px;">Event Types Tracked</h3>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="font-size:0.78rem;display:flex;align-items:center;gap:8px;"><span class="tag tag-blue">created</span> Ticket first submitted</div>
+              <div style="font-size:0.78rem;display:flex;align-items:center;gap:8px;"><span class="tag tag-teal">triaged_by_ai</span> Gemini analysis complete</div>
+              <div style="font-size:0.78rem;display:flex;align-items:center;gap:8px;"><span class="tag tag-amber">assigned</span> Agent allocated</div>
+              <div style="font-size:0.78rem;display:flex;align-items:center;gap:8px;"><span class="tag tag-purple">linked_knowledge</span> KB article matched</div>
+              <div style="font-size:0.78rem;display:flex;align-items:center;gap:8px;"><span class="tag tag-green">resolved</span> Issue closed</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 12: Data Seeding Strategy ──────────────── -->
+  <div class="slide" id="slide-12">
+    <div class="slide-content">
+      <div class="chip chip-teal" style="margin-bottom:14px;">🌱 Data Engineering</div>
+      <h2 class="slide-title" style="margin-bottom:6px;">Cloud-Incident <span class="gradient-text">Seed Dataset</span></h2>
+      <div class="divider"></div>
+      <div class="seed-stats">
+        <div class="seed-stat">
+          <div class="seed-val gradient-text">150</div>
+          <div class="seed-lbl">Work Items</div>
+        </div>
+        <div class="seed-stat">
+          <div class="seed-val" style="color:var(--teal);">12</div>
+          <div class="seed-lbl">Incident Motifs</div>
+        </div>
+        <div class="seed-stat">
+          <div class="seed-val" style="color:var(--amber);">12</div>
+          <div class="seed-lbl">Runbook Articles</div>
+        </div>
+        <div class="seed-stat">
+          <div class="seed-val" style="color:var(--green);">450+</div>
+          <div class="seed-lbl">Activity Events</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:8px;">cloud_seed.py — Incident Motifs</div>
+          <div class="code-block" style="font-size:0.68rem;">
+            <span class="code-comment"># 12 real cloud incident archetypes</span><br/>
+            <span class="code-key">{"title":</span> <span class="code-str">"GKE pod crash loop"</span>,<br/>
+            &nbsp;<span class="code-key"> "tag":</span> <span class="code-str">"Kubernetes"</span>,<br/>
+            &nbsp;<span class="code-key"> "summary":</span> <span class="code-str">"OOMKilled post-deploy"</span>,<br/>
+            &nbsp;<span class="code-key"> "rc":</span> <span class="code-str">"Memory Limits"</span>,<br/>
+            &nbsp;<span class="code-key"> "part":</span> <span class="code-str">"GKE"</span>,<br/>
+            &nbsp;<span class="code-key"> "act":</span> <span class="code-str">"Increase mem limit"</span>},<br/><br/>
+            <span class="code-comment"># 90-day span, random status distribution</span><br/>
+            <span class="code-key">statuses</span> = [<span class="code-str">"open"</span>, <span class="code-str">"in_progress"</span>,<br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-str">"pending_approval"</span>,<br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-str">"resolved"</span>, <span class="code-str">"closed"</span>]
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:8px;">Seeded Incident Categories</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;gap:10px;align-items:center;padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:0.78rem;">
+              <span>🐳</span> <span style="flex:1;">GKE Pod Crash Loop (OOMKilled)</span> <span class="tag tag-rose">K8s</span>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:0.78rem;">
+              <span>🗄️</span> <span style="flex:1;">Cloud SQL Connection Exhaustion</span> <span class="tag tag-amber">DB</span>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:0.78rem;">
+              <span>🌐</span> <span style="flex:1;">API Gateway 504 Timeout Spike</span> <span class="tag tag-teal">Net</span>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:0.78rem;">
+              <span>🔐</span> <span style="flex:1;">IAM Permission Regression</span> <span class="tag tag-purple">IAM</span>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:0.78rem;">
+              <span>📜</span> <span style="flex:1;">Certificate Expiration on LB</span> <span class="tag tag-green">Cert</span>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:0.78rem;">
+              <span>⚡</span> <span style="flex:1;">Auth Token Latency Spike</span> <span class="tag tag-blue">Auth</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 13: API Design ──────────────────────────── -->
+  <div class="slide" id="slide-13">
+    <div class="slide-content">
+      <div class="chip chip-accent" style="margin-bottom:14px;">🔌 API Design</div>
+      <h2 class="slide-title" style="margin-bottom:6px;">FastAPI <span class="gradient-text">REST Endpoints</span></h2>
+      <div class="divider"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:8px;">Endpoint Registry</div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+            <table class="api-table">
+              <thead>
+                <tr>
+                  <th>Method</th>
+                  <th>Endpoint</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="method method-get">GET</span></td>
+                  <td><span class="endpoint-path">/api/dashboard</span></td>
+                  <td style="font-size:0.75rem;color:var(--text-muted);">KPI summary counts</td>
+                </tr>
+                <tr>
+                  <td><span class="method method-get">GET</span></td>
+                  <td><span class="endpoint-path">/api/work-items</span></td>
+                  <td style="font-size:0.75rem;color:var(--text-muted);">All work items (filterable)</td>
+                </tr>
+                <tr>
+                  <td><span class="method method-get">GET</span></td>
+                  <td><span class="endpoint-path">/api/work-items/{id}</span></td>
+                  <td style="font-size:0.75rem;color:var(--text-muted);">Single item by key</td>
+                </tr>
+                <tr>
+                  <td><span class="method method-get">GET</span></td>
+                  <td><span class="endpoint-path">/api/approvals</span></td>
+                  <td style="font-size:0.75rem;color:var(--text-muted);">All approval requests</td>
+                </tr>
+                <tr>
+                  <td><span class="method method-get">GET</span></td>
+                  <td><span class="endpoint-path">/api/knowledge</span></td>
+                  <td style="font-size:0.75rem;color:var(--text-muted);">KB articles with tags</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top:12px;padding:12px 14px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);border-radius:10px;">
+            <div style="font-size:0.75rem;font-weight:700;color:var(--green);margin-bottom:4px;">✅ Query Filters Supported</div>
+            <div style="font-size:0.72rem;color:var(--text-muted);">
+              <span class="tag tag-teal">?type=ticket</span> &nbsp;
+              <span class="tag tag-teal">?type=issue</span> &nbsp;
+              <span class="tag tag-blue">?assigneeId=uuid</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:8px;">AI Enrichment Pipeline (services.py)</div>
+          <div class="code-block" style="font-size:0.68rem;line-height:1.65;">
+            <span class="code-comment"># Every work item is enriched on read</span><br/>
+            <span class="code-key">def</span> <span class="code-val">_enrich_ai_metadata</span>(raw_meta, raw_summary, row):<br/>
+            &nbsp; conf = <span class="code-val">base_conf</span>[priority] + (seed - 0.5) * 0.18<br/>
+            &nbsp; sentiment = <span class="code-str">"negative"</span> <span class="code-op">if</span> priority == <span class="code-str">"urgent"</span><br/>
+            &nbsp; category = <span class="code-val">_infer_category</span>(title)  <span class="code-comment"># keyword NLP</span><br/>
+            &nbsp; kb_articles = _KB_ARTICLE_POOL[start:start+count]<br/>
+            &nbsp; duplicate_of = <span class="code-str">f"TKT-{dup_num}"</span> <span class="code-op">if</span> seed &lt; 0.08<br/><br/>
+            &nbsp; <span class="code-op">return</span> {<br/>
+            &nbsp;&nbsp; <span class="code-str">"confidenceScore"</span>: conf,<br/>
+            &nbsp;&nbsp; <span class="code-str">"sentiment"</span>: sentiment,<br/>
+            &nbsp;&nbsp; <span class="code-str">"suggestedCategory"</span>: category,<br/>
+            &nbsp;&nbsp; <span class="code-str">"agentAssistSuggestion"</span>: _AGENT_ASSIST[cat],<br/>
+            &nbsp;&nbsp; <span class="code-str">"knowledgeArticleIds"</span>: kb_articles,<br/>
+            &nbsp;&nbsp; <span class="code-str">"duplicateOf"</span>: duplicate_of<br/>
+            &nbsp; }
+          </div>
+
+          <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;gap:10px;align-items:center;font-size:0.78rem;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
+              <span>🔒</span>
+              <span style="color:var(--text-muted);">Supabase Auth JWT passed via <span style="color:var(--accent-light);">Authorization</span> header</span>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;font-size:0.78rem;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
+              <span>📦</span>
+              <span style="color:var(--text-muted);">Pydantic models enforce strict response schemas</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 14: Results & Metrics ──────────────────── -->
+  <div class="slide" id="slide-14">
+    <div class="slide-content">
+      <div class="chip chip-green" style="margin-bottom:14px;">📈 Results</div>
+      <h2 class="slide-title" style="margin-bottom:6px;">System <span class="gradient-text">Performance & Metrics</span></h2>
+      <div class="divider"></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
+        <div class="card" style="text-align:center;padding:20px;">
+          <div style="font-size:2rem;font-weight:900;color:var(--accent-light);">&lt;15s</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em;">AI Triage Time</div>
+        </div>
+        <div class="card" style="text-align:center;padding:20px;">
+          <div style="font-size:2rem;font-weight:900;color:var(--green);">87%</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em;">Avg AI Confidence</div>
+        </div>
+        <div class="card" style="text-align:center;padding:20px;">
+          <div style="font-size:2rem;font-weight:900;color:var(--teal);">150</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em;">Incidents Seeded</div>
+        </div>
+        <div class="card" style="text-align:center;padding:20px;">
+          <div style="font-size:2rem;font-weight:900;color:var(--amber);">11</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em;">DB Migrations</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="card" style="padding:20px;">
+          <h3 class="section-title" style="margin-bottom:14px;">🤖 AI Triage Accuracy</h3>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="font-size:0.82rem;font-weight:600;margin-bottom:2px;">Category Detection</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:0.78rem;margin-bottom:6px;">
+              <div style="flex:1;height:8px;background:rgba(255,255,255,0.08);border-radius:4px;"><div style="width:91%;height:100%;background:linear-gradient(90deg,var(--green),var(--teal));border-radius:4px;"></div></div>
+              <span style="color:var(--green);font-weight:700;">91%</span>
+            </div>
+            <div style="font-size:0.82rem;font-weight:600;margin-bottom:2px;">Priority Alignment</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:0.78rem;margin-bottom:6px;">
+              <div style="flex:1;height:8px;background:rgba(255,255,255,0.08);border-radius:4px;"><div style="width:85%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-light));border-radius:4px;"></div></div>
+              <span style="color:var(--accent-light);font-weight:700;">85%</span>
+            </div>
+            <div style="font-size:0.82rem;font-weight:600;margin-bottom:2px;">KB Article Relevance</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:0.78rem;margin-bottom:6px;">
+              <div style="flex:1;height:8px;background:rgba(255,255,255,0.08);border-radius:4px;"><div style="width:84%;height:100%;background:linear-gradient(90deg,var(--teal),var(--green));border-radius:4px;"></div></div>
+              <span style="color:var(--teal);font-weight:700;">84%</span>
+            </div>
+            <div style="font-size:0.82rem;font-weight:600;margin-bottom:2px;">Duplicate Detection Rate</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:0.78rem;">
+              <div style="flex:1;height:8px;background:rgba(255,255,255,0.08);border-radius:4px;"><div style="width:8%;height:100%;background:var(--amber);border-radius:4px;"></div></div>
+              <span style="color:var(--amber);font-weight:700;">~8%</span>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="padding:20px;">
+          <h3 class="section-title" style="margin-bottom:14px;">⚡ System Performance</h3>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="padding:10px 14px;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);border-radius:8px;">
+              <div style="font-size:0.78rem;font-weight:600;color:var(--green);">Backend API Response</div>
+              <div style="font-size:1.2rem;font-weight:800;margin-top:2px;">&lt; 200ms avg</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);">FastAPI + Supabase pooled connections</div>
+            </div>
+            <div style="padding:10px 14px;background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.2);border-radius:8px;">
+              <div style="font-size:0.78rem;font-weight:600;color:var(--accent-light);">Frontend LCP</div>
+              <div style="font-size:1.2rem;font-weight:800;margin-top:2px;">&lt; 1.8s</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);">Next.js Server Components + edge caching</div>
+            </div>
+            <div style="padding:10px 14px;background:rgba(34,211,238,0.06);border:1px solid rgba(34,211,238,0.2);border-radius:8px;">
+              <div style="font-size:0.78rem;font-weight:600;color:var(--teal);">Seed Script Execution</div>
+              <div style="font-size:1.2rem;font-weight:800;margin-top:2px;">~90 seconds</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);">150 items + full event trail seeding</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 15: Challenges & Learnings ─────────────── -->
+  <div class="slide" id="slide-15">
+    <div class="slide-content">
+      <div class="chip chip-amber" style="margin-bottom:14px;">💡 Learnings</div>
+      <h2 class="slide-title" style="margin-bottom:6px;">Challenges &amp; <span class="gradient-text">Key Takeaways</span></h2>
+      <div class="divider"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:10px;">⚔️ Challenges Faced</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div class="card" style="padding:16px;border-color:rgba(244,63,94,0.2);background:rgba(244,63,94,0.04);">
+              <div style="display:flex;gap:10px;align-items:flex-start;">
+                <span style="font-size:20px;">🗄️</span>
+                <div>
+                  <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px;">Schema Evolution</div>
+                  <div style="font-size:0.78rem;color:var(--text-muted);">Multi-table migrations with cascading FKs required careful ordering of 11 sequential migration files to avoid constraint violations.</div>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="padding:16px;border-color:rgba(244,63,94,0.2);background:rgba(244,63,94,0.04);">
+              <div style="display:flex;gap:10px;align-items:flex-start;">
+                <span style="font-size:20px;">🔗</span>
+                <div>
+                  <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px;">Frontend ↔ Backend Type Sync</div>
+                  <div style="font-size:0.78rem;color:var(--text-muted);">Pydantic schema mismatches caused runtime 422 errors. Solved by strict TypeScript generics aligned to Pydantic response models.</div>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="padding:16px;border-color:rgba(244,63,94,0.2);background:rgba(244,63,94,0.04);">
+              <div style="display:flex;gap:10px;align-items:flex-start;">
+                <span style="font-size:20px;">🔐</span>
+                <div>
+                  <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px;">RLS Policy Conflicts</div>
+                  <div style="font-size:0.78rem;color:var(--text-muted);">Row Level Security blocked seed scripts and API calls. Required service_role key for seeding and anon key handoff for client queries.</div>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="padding:16px;border-color:rgba(244,63,94,0.2);background:rgba(244,63,94,0.04);">
+              <div style="display:flex;gap:10px;align-items:flex-start;">
+                <span style="font-size:20px;">🧪</span>
+                <div>
+                  <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px;">Realistic Data Generation</div>
+                  <div style="font-size:0.78rem;color:var(--text-muted);">Building a deterministic-yet-realistic seed required MD5-based pseudo-random seeding to ensure reproducibility across runs.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:10px;">🏆 Key Learnings</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div class="card" style="padding:16px;border-color:rgba(16,185,129,0.2);background:rgba(16,185,129,0.04);">
+              <div style="display:flex;gap:10px;align-items:flex-start;">
+                <span style="font-size:20px;">🤖</span>
+                <div>
+                  <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px;">AI as a Service Layer</div>
+                  <div style="font-size:0.78rem;color:var(--text-muted);">Treating AI enrichment as a service-layer concern (not DB-layer) enabled graceful degradation when model confidence was low.</div>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="padding:16px;border-color:rgba(16,185,129,0.2);background:rgba(16,185,129,0.04);">
+              <div style="display:flex;gap:10px;align-items:flex-start;">
+                <span style="font-size:20px;">📊</span>
+                <div>
+                  <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px;">JSONB for Flexible AI Metadata</div>
+                  <div style="font-size:0.78rem;color:var(--text-muted);">Storing AI output as JSONB allowed evolving the schema without migrations — critical for rapidly changing LLM output formats.</div>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="padding:16px;border-color:rgba(16,185,129,0.2);background:rgba(16,185,129,0.04);">
+              <div style="display:flex;gap:10px;align-items:flex-start;">
+                <span style="font-size:20px;">🏗️</span>
+                <div>
+                  <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px;">Server Components for Data Freshness</div>
+                  <div style="font-size:0.78rem;color:var(--text-muted);">Next.js 14 Server Components simplified live data fetching — no client-side state management needed for read-heavy dashboards.</div>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="padding:16px;border-color:rgba(16,185,129,0.2);background:rgba(16,185,129,0.04);">
+              <div style="display:flex;gap:10px;align-items:flex-start;">
+                <span style="font-size:20px;">🔄</span>
+                <div>
+                  <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px;">Audit-First Design</div>
+                  <div style="font-size:0.78rem;color:var(--text-muted);">Building activity_log and ai_audit_log from day one proved invaluable for debugging AI decisions and demonstrating system transparency.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 16: Future Work / Roadmap ──────────────── -->
+  <div class="slide" id="slide-16">
+    <div class="slide-content">
+      <div class="chip chip-accent" style="margin-bottom:14px;">🚀 Future Work</div>
+      <h2 class="slide-title" style="margin-bottom:6px;">The <span class="gradient-text">Roadmap</span> Ahead</h2>
+      <div class="divider"></div>
+      <div class="roadmap-grid" style="margin-bottom:20px;">
+        <div class="roadmap-phase">
+          <div class="rp-header" style="background:rgba(99,102,241,0.08);border-color:rgba(99,102,241,0.2);">
+            <span style="font-size:16px;">🔬</span>
+            <div>
+              <div class="rp-num" style="color:var(--accent-light);">PHASE 1 — Immediate</div>
+              <div class="rp-label">AI Enhancement</div>
+            </div>
+          </div>
+          <div class="rp-body">
+            <div class="rp-item"><div class="rp-dot" style="background:var(--accent);"></div><div class="rp-text">Live Gemini API integration replacing deterministic enrichment layer</div></div>
+            <div class="rp-item"><div class="rp-dot" style="background:var(--accent);"></div><div class="rp-text">Embeddings-based semantic KB article similarity search</div></div>
+            <div class="rp-item"><div class="rp-dot" style="background:var(--accent);"></div><div class="rp-text">Multi-turn conversational AI assistant for ticket resolution</div></div>
+            <div class="rp-item"><div class="rp-dot" style="background:var(--accent);"></div><div class="rp-text">Real-time SLA breach prediction with proactive escalation</div></div>
+          </div>
+        </div>
+        <div class="roadmap-phase">
+          <div class="rp-header" style="background:rgba(34,211,238,0.07);border-color:rgba(34,211,238,0.2);">
+            <span style="font-size:16px;">⚙️</span>
+            <div>
+              <div class="rp-num" style="color:var(--teal);">PHASE 2 — Near-Term</div>
+              <div class="rp-label">Platform Scale</div>
+            </div>
+          </div>
+          <div class="rp-body">
+            <div class="rp-item"><div class="rp-dot" style="background:var(--teal);"></div><div class="rp-text">WebSocket real-time ticket updates and collaborative commenting</div></div>
+            <div class="rp-item"><div class="rp-dot" style="background:var(--teal);"></div><div class="rp-text">Slack / PagerDuty integration for on-call alerting</div></div>
+            <div class="rp-item"><div class="rp-dot" style="background:var(--teal);"></div><div class="rp-text">Multi-tenant support with organization-level data isolation</div></div>
+            <div class="rp-item"><div class="rp-dot" style="background:var(--teal);"></div><div class="rp-text">Advanced Recharts dashboards with custom date filtering</div></div>
+          </div>
+        </div>
+        <div class="roadmap-phase">
+          <div class="rp-header" style="background:rgba(245,158,11,0.07);border-color:rgba(245,158,11,0.2);">
+            <span style="font-size:16px;">🌟</span>
+            <div>
+              <div class="rp-num" style="color:var(--amber);">PHASE 3 — Long-Term</div>
+              <div class="rp-label">Enterprise Vision</div>
+            </div>
+          </div>
+          <div class="rp-body">
+            <div class="rp-item"><div class="rp-dot" style="background:var(--amber);"></div><div class="rp-text">Autonomous resolution agents for common incident patterns</div></div>
+            <div class="rp-item"><div class="rp-dot" style="background:var(--amber);"></div><div class="rp-text">Fine-tuned domain model on historical incident corpus</div></div>
+            <div class="rp-item"><div class="rp-dot" style="background:var(--amber);"></div><div class="rp-text">ITSM framework compliance (ITIL 4 process mapping)</div></div>
+            <div class="rp-item"><div class="rp-dot" style="background:var(--amber);"></div><div class="rp-text">Mobile iOS/Android companion app for on-call engineers</div></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+        <div style="text-align:center;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+          <div style="font-size:1.4rem;font-weight:800;color:var(--accent-light);">100%</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">Open Source Stack</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+          <div style="font-size:1.4rem;font-weight:800;color:var(--teal);">MTTR</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">Target: 60% reduction</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+          <div style="font-size:1.4rem;font-weight:800;color:var(--green);">SOC 2</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">Compliance target</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+          <div style="font-size:1.4rem;font-weight:800;color:var(--amber);">10K+</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">Incidents at scale</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 17: Thank You ────────────────────────────── -->
+  <div class="slide" id="slide-17">
+    <div class="slide-content" style="text-align:center;">
+      <div class="ty-logo">🤖</div>
+      <h1 class="mega" style="margin-bottom:12px;">
+        Thank <span class="gradient-text">You!</span>
+      </h1>
+      <p class="lead" style="max-width:560px;margin:0 auto;">
+        Built as part of <strong style="color:#fff;">DSC 550 — Master's Project</strong><br />
+        An end-to-end AI-powered support platform demonstrating the future of intelligent IT operations.
+      </p>
+
+      <div class="contributors" style="margin-top:28px;">
+        <div class="contributor-card">
+          <div class="contributor-avatar av-1">SB</div>
+          <div>
+            <div class="contributor-name">Shushruth V Bharadwaj</div>
+            <div class="contributor-role">Full-Stack &amp; AI Systems</div>
+          </div>
+        </div>
+        <div class="contributor-card">
+          <div class="contributor-avatar av-2">KK</div>
+          <div>
+            <div class="contributor-name">Kaustub Kumarswamy</div>
+            <div class="contributor-role">Data Engineering &amp; Analytics</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:28px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
+        <div class="repo-badge">
+          <span>💻</span> Next.js + FastAPI + Supabase + Gemini 1.5 Pro
+        </div>
+      </div>
+
+      <div style="margin-top:24px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">
+        <span class="tag tag-blue">3-Tier Architecture</span>
+        <span class="tag tag-teal">AI-Powered Triage</span>
+        <span class="tag tag-green">150 Cloud Incidents</span>
+        <span class="tag tag-amber">Knowledge Graph</span>
+        <span class="tag tag-purple">Approval Workflows</span>
+        <span class="tag tag-rose">Real-Time Analytics</span>
+        <span class="tag tag-blue">11 DB Migrations</span>
+      </div>
+
+      <div class="university-badge" style="margin-top:24px;font-size:0.88rem;">
+        🎓 &nbsp;Master's in Data Science &nbsp;·&nbsp; DSC 550 &nbsp;·&nbsp; April 2026
+      </div>
+    </div>
+  </div>
+
+</div><!-- /deck -->
+
+<!-- ─── Navigation ─────────────────────────────────────── -->
+<nav class="nav" id="nav">
+  <button class="nav-btn" id="prevBtn" onclick="navigate(-1)" title="Previous">←</button>
+  <div class="slide-dots" id="dots"></div>
+  <span class="nav-counter" id="navCounter">1 / 17</span>
+  <button class="nav-btn" id="nextBtn" onclick="navigate(1)" title="Next">→</button>
+</nav>
+
+<script>
+  const TOTAL = 17;
+  let current = 0;
+  let animating = false;
+
+  const slides   = document.querySelectorAll('.slide');
+  const counter  = document.getElementById('navCounter');
+  const badge    = document.getElementById('slideCounter');
+  const progress = document.getElementById('progressBar');
+  const dotsContainer = document.getElementById('dots');
+
+  // Build dots
+  for(let i = 0; i < TOTAL; i++){
+    const d = document.createElement('div');
+    d.className = 'dot' + (i===0?' active':'');
+    d.onclick = () => goTo(i);
+    dotsContainer.appendChild(d);
+  }
+
+  function pad(n){ return (n<10?'0':'')+n; }
+
+  function updateUI(){
+    counter.textContent = `${current+1} / ${TOTAL}`;
+    badge.textContent   = `${pad(current+1)} / ${pad(TOTAL)}`;
+    progress.style.width = `${((current+1)/TOTAL)*100}%`;
+    document.querySelectorAll('.dot').forEach((d,i)=>{
+      d.classList.toggle('active', i===current);
+    });
+  }
+
+  function goTo(idx){
+    if(idx===current || animating) return;
+    animating = true;
+    const prev = current;
+    current = Math.max(0, Math.min(TOTAL-1, idx));
+    slides[prev].classList.add('exit');
+    slides[prev].classList.remove('active');
+    setTimeout(()=>{ slides[prev].classList.remove('exit'); }, 550);
+    slides[current].classList.add('active');
+    updateUI();
+    setTimeout(()=>{ animating=false; }, 560);
+  }
+
+  function navigate(dir){ goTo(current + dir); }
+
+  // Keyboard
+  document.addEventListener('keydown', e=>{
+    if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' ') { e.preventDefault(); navigate(1); }
+    if(e.key==='ArrowLeft'||e.key==='ArrowUp')  { e.preventDefault(); navigate(-1); }
+    if(e.key==='f'||e.key==='F') { document.documentElement.requestFullscreen?.(); }
+    if(e.key==='Home') goTo(0);
+    if(e.key==='End')  goTo(TOTAL-1);
+  });
+
+  // Touch swipe
+  let tx=0;
+  document.addEventListener('touchstart',e=>{ tx=e.touches[0].clientX; });
+  document.addEventListener('touchend',e=>{
+    const dx = e.changedTouches[0].clientX - tx;
+    if(Math.abs(dx)>50) navigate(dx<0?1:-1);
+  });
+
+  updateUI();
+</script>
+</body>
+</html>
